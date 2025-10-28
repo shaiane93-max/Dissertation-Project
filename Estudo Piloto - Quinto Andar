@@ -1,0 +1,462 @@
+#Estudo Piloto Quinto Andar - Fase inicial do tratamento de dados - Limpeza da Base
+
+install.packages(c("readxl", "dplyr", "tidytext", "purrr", "stringr", "stopwords"))
+
+library(readxl)
+library(dplyr)
+library(tidytext)
+library(purrr)
+library(stringr)
+library(stopwords)
+
+#unificação das 14 planilhas em uma unica base, com a mesma quantidade de colunas.
+planilhas <- c(
+  "Post_12_23_01_25_quintoandar",
+  "Post_14_27_01_2025_quintoandar",
+  "Post_28_30_01_2025_quintoandar_influencier_rafaela",
+  "Post_33_31_01_2025_quintoandar_influenciadora_rafaela",
+  "Post_47_02_02_2025_quintoandar_influenciadora_rafaela",
+  "Post_59_10_02_2025_quintoandar",
+  "Post_64_19_02_2025_quintoandar",
+  "Post_68_28_02_2025_quintoandar",
+  "Post_7_16_01_2025_quintoandar",
+  "Post_75_24_03_2025_quintoandar",
+  "Post_83_23_04_2025_quintoandar",
+  "Post_84_24_04_2025_quintoandar",
+  "Post_85_24_04_2025_quintoandar",
+  "Post_86_25_04_2025_quintoandar"
+)
+
+sapply(planilhas, function(nome) {
+  ncol(get(nome))
+})
+
+# Descobrir todas as colunas existentes
+colunas_unicas <- unique(unlist(lapply(planilhas, function(nome) colnames(get(nome)))))
+
+# Adicionar colunas faltantes como NA
+for (nome in planilhas) {
+  df <- get(nome)
+  colunas_faltantes <- setdiff(colunas_unicas, colnames(df))
+  if(length(colunas_faltantes) > 0) {
+    df[colunas_faltantes] <- NA
+    assign(nome, df)
+  }
+}
+
+# Número total de linhas no dataframe unificado
+n_linhas <- nrow(df)
+n_linhas
+
+planilhas <- c(
+  "Post_12",
+  "Post_14",
+  "Post_28",
+  "Post_33",
+  "Post_47",
+  "Post_59",
+  "Post_64",
+  "Post_68",
+  "Post_7",
+  "Post_75",
+  "Post_83",
+  "Post_84",
+  "Post_85",
+  "Post_86"
+)
+library(dplyr)
+
+df <- bind_rows(lapply(planilhas, function(nome) get(nome)))
+nrow(df)  # agora deve mostrar o total correto de linhas
+
+ls()  # lista todos os objetos carregados no R
+
+planilhas <- c(
+  "Post_12_23_01_25_quintoandar",
+  "Post_14_27_01_2025_quintoandar",
+  "Post_28_30_01_2025_quintoandar_influencier_rafaela",
+  "Post_33_31_01_2025_quintoandar_influenciadora_rafaela",
+  "Post_47_02_02_2025_quintoandar_influenciadora_rafaela",
+  "Post_59_10_02_2025_quintoandar",
+  "Post_64_19_02_2025_quintoandar",
+  "Post_68_28_02_2025_quintoandar",
+  "Post_7_16_01_2025_quintoandar",
+  "Post_75_24_03_2025_quintoandar",
+  "Post_83_23_04_2025_quintoandar",
+  "Post_84_24_04_2025_quintoandar",
+  "Post_85_24_04_2025_quintoandar",
+  "Post_86_25_04_2025_quintoandar"
+)
+
+sapply(planilhas, exists)
+
+library(dplyr)
+
+df <- bind_rows(lapply(planilhas, get))
+nrow(df)  # agora deve mostrar todas as linhas somadas corretamente
+
+for (nome in planilhas) {
+  cat("Planilha:", nome, "\n")
+  print(head(get(nome), 3))  # mostra as 3 primeiras linhas
+}
+ncol(df)
+colnames(df)
+
+sapply(df, function(x) sum(is.na(x)))
+
+# Nome da planilha com problema
+nome_problema <- "Posts_56_57_e_63_fevereiro_quintoandar_influenciadora_rafaela"
+
+# Descobrir colunas que faltam comparando com as demais
+colunas_padrao <- colnames(df)  # pega todas as colunas do dataframe final que estão corretas
+colunas_faltantes <- setdiff(colunas_padrao, colnames(get(nome_problema)))
+
+# Adicionar colunas faltantes como NA
+if(length(colunas_faltantes) > 0){
+  df_problema <- get(nome_problema)
+  df_problema[colunas_faltantes] <- NA
+  assign(nome_problema, df_problema)  # substitui no Environment
+}
+
+# Conferir agora
+ncol(get(nome_problema))
+
+bind_rows()
+
+# Criar coluna .row para referência
+df <- df %>%
+  mutate(.row = row_number())
+head(df$.row)
+nrow(df)
+length(df$.row)
+head(df$.row)
+
+
+#Limpeza das stop words:
+
+# Pacotes necessários
+library(dplyr)
+library(stringr)
+library(tidytext)
+library(stopwords)
+
+# 1️⃣ Nomes das planilhas no Environment
+planilhas <- c(
+  "Post_12_23_01_25_quintoandar",
+  "Post_14_27_01_2025_quintoandar",
+  "Post_28_30_01_2025_quintoandar_influencier_rafaela",
+  "Post_33_31_01_2025_quintoandar_influenciadora_rafaela",
+  "Post_47_02_02_2025_quintoandar_influenciadora_rafaela",
+  "Post_59_10_02_2025_quintoandar",
+  "Post_64_19_02_2025_quintoandar",
+  "Post_68_28_02_2025_quintoandar",
+  "Post_7_16_01_2025_quintoandar",
+  "Post_75_24_03_2025_quintoandar",
+  "Post_83_23_04_2025_quintoandar",
+  "Post_84_24_04_2025_quintoandar",
+  "Post_85_24_04_2025_quintoandar",
+  "Post_86_25_04_2025_quintoandar"
+)
+
+# 2️⃣ Padronizar colunas (adiciona NA onde faltar colunas)
+# Descobre todas as colunas únicas em todas as planilhas
+todas_colunas <- unique(unlist(lapply(planilhas, function(x) colnames(get(x)))))
+
+# Padroniza cada planilha para ter todas as colunas
+planilhas_padronizadas <- lapply(planilhas, function(nome) {
+  df_temp <- get(nome)
+  colunas_faltantes <- setdiff(todas_colunas, colnames(df_temp))
+  if(length(colunas_faltantes) > 0){
+    df_temp[colunas_faltantes] <- NA
+  }
+  return(df_temp)
+})
+
+# 3️⃣ Unir todas as planilhas
+df <- bind_rows(planilhas_padronizadas)
+
+# 4️⃣ Criar coluna .row
+df <- df %>% mutate(.row = row_number())
+
+# 5️⃣ Limpeza inicial do texto
+df <- df %>%
+  mutate(
+    text_limpo_aux = str_to_lower(text),                          # minúsculas
+    text_limpo_aux = str_replace_all(text_limpo_aux, "[^\\w\\s]", " "),  # remove pontuação
+    text_limpo_aux = str_replace_all(text_limpo_aux, "\\d+", " "),        # remove números
+    text_limpo_aux = str_squish(text_limpo_aux)                             # remove espaços extras
+  )
+
+# 6️⃣ Tokenizar e remover stopwords
+stopwords_pt <- stopwords("pt")
+tokens <- df %>%
+  select(.row, text_limpo_aux) %>%
+  unnest_tokens(word, text_limpo_aux) %>%
+  filter(!word %in% stopwords_pt & !is.na(word) & word != "")
+
+# 7️⃣ Reconstruir texto limpo por linha
+texto_limpo_df <- tokens %>%
+  group_by(.row) %>%
+  summarise(texto_limpo = str_c(word, collapse = " "), .groups = "drop")
+
+# 8️⃣ Juntar ao dataframe original
+df <- df %>%
+  left_join(texto_limpo_df, by = ".row") %>%
+  select(-text_limpo_aux)  # remove coluna auxiliar
+
+# 9️⃣ Conferir resultado
+head(df[, c("text", "texto_limpo")])
+nrow(df)
+ncol(df)
+
+# 10️⃣ Salvar CSV final
+write.csv(df, "df_unificado_com_texto_limpo.csv", row.names = FALSE)
+
+names(df)
+
+install.packages("writexl")
+library(writexl)
+write_xlsx(df, "C:/Users/Shai/Desktop/df_unificado_com_texto_limpo.xlsx")
+
+
+#####Normalizar a base para text mining#####
+# Instala pacotes
+library(readxl)
+library(dplyr)
+library(stringr)
+library(stringi)
+library(writexl)
+
+df <- read_xlsx("C:/Users/Shai/Desktop/Mestrado/Projeto de Pesquisa - Dissertação/Dados coletados Instagram/df_unificado_com_texto_limpo.xlsx")
+
+cat("linhas:", nrow(df), " | Colunas:", ncol(df), "\n")
+names(df)
+
+NormalizaParaTextMining <- function(texto) {
+  texto <- as.character(texto)
+  texto[is.na(texto)] <- ""
+  
+  resultado <- sapply(texto, function(t) {
+    t <- stringi::stri_trans_general(t, "Latin-ASCII")      # remove acentos
+    t <- stringr::str_replace_all(t, "[^[:alpha:]\\s]", " ")# remove símbolos e números
+    t <- stringr::str_squish(t)                             # tira espaços extras
+    t <- tolower(t)                                         # minúsculas
+    if (nchar(t) == 0) return(NA_character_)
+    return(t)
+  }, USE.NAMES = FALSE)
+  
+  return(resultado)
+}
+
+# verifica se a coluna existe
+if (!"texto_limpo" %in% names(df)) {
+  stop("❌ Coluna 'texto_limpo' não encontrada na base. Confira o nome exato com names(df).")
+}
+
+# aplica a função
+df$texto_normalizado <- NormalizaParaTextMining(df$texto_limpo)
+
+# confere
+cat("✅ Base pronta: ", nrow(df), "linhas.\n")
+head(df[, c("text", "texto_limpo", "texto_normalizado")])
+
+
+write_xlsx(df, "C:/C:/Users/Shai/Desktop/Mestrado/Projeto de Pesquisa - Dissertação/Dados coletados Instagram/df_unificado_texto_normalizado.xlsx")
+cat("✅ Arquivo salvo com sucesso!\n")
+
+
+
+########Em uma conferência da base, notei a existência da "palavra" "e" aparece 490 vezes no campo de texto_normalizado.# 
+### Com isto rodei uma nova limpeza da base, evitando problemas futuros nas frequências.#####
+
+####limpeza da base:######
+
+library(dplyr)
+library(tidyr)
+library(tidytext)
+library(stringr)
+library(stopwords)
+
+# Nome da coluna de texto
+coluna_texto <- "texto_normalizado"
+
+# Stopwords padrão (português)
+palavrasRemover <- stopwords("pt")
+
+# 🚀 Processo direto na própria df
+df <- df %>%
+  mutate(
+    .row_id_for_clean = row_number(),
+    texto_original_para_limpeza = as.character(.data[[coluna_texto]]),
+    texto_original_para_limpeza = texto_original_para_limpeza |> 
+      tolower() |>                                      # tudo minúsculo
+      iconv(to = "ASCII//TRANSLIT") |>                  # remove acentos
+      gsub("[^a-zA-Z\\s]", " ", x = _) |>               # tira pontuação
+      gsub("\\s+", " ", x = _) |>                       # limpa espaços extras
+      trimws()                                          # tira espaços das bordas
+  ) %>%
+  unnest_tokens(word, texto_original_para_limpeza) %>%
+  filter(!is.na(word), word != "", !(word %in% palavrasRemover)) %>%
+  group_by(.row_id_for_clean) %>%
+  summarise(texto_normalizado = str_c(word, collapse = " "), .groups = "drop") %>%
+  right_join(df %>% mutate(.row_id_for_clean = row_number()), by = ".row_id_for_clean") %>%
+  mutate(
+    texto_normalizado = coalesce(texto_normalizado.x, texto_normalizado.y)
+  ) %>%
+  select(-.row_id_for_clean, -ends_with(".x"), -ends_with(".y"))
+
+# Conferência
+df %>% select(texto_normalizado) %>% slice_head(n = 10)
+
+
+#####NOVA BASE LIMPA SALVA#############
+
+library(openxlsx)
+
+# Descobre o caminho da área de trabalho do usuário
+desktop_path <- file.path(Sys.getenv("USERPROFILE"), "Desktop")
+
+# Salva o arquivo "df.xlsx" lá
+write.xlsx(df, file.path(desktop_path, "df.xlsx"))
+
+message("✅ Arquivo salvo com sucesso na área de trabalho!")
+
+########Criando dicionários positivo e negativo para bater com os dados#############
+# ============================
+# Pacotes
+# ============================
+library(dplyr)
+library(tidytext)
+library(stringr)
+library(stringi)
+library(writexl)
+library(purrr)
+library(SnowballC)
+
+# ============================
+# Função para normalizar palavras + stemming
+# ============================
+limpaStem <- function(palavra){
+  palavra <- as.character(palavra)
+  palavra <- stringi::stri_trans_general(palavra, "Latin-ASCII") # remove acentos
+  palavra <- str_to_lower(palavra)                               # minúsculas
+  palavra <- str_squish(palavra)                                 # remove espaços extras
+  palavra <- wordStem(palavra, language = "portuguese")          # aplica stemming
+  return(palavra)
+}
+
+# ============================
+# Preparar dicionários (já no environment)
+# ============================
+dicionarioPositivo <- Dicionario_Drivers %>%
+  select(driver, subdriver, dicionarioP) %>%
+  na.omit() %>%
+  mutate(Palavra = limpaStem(dicionarioP)) %>%
+  distinct(driver, subdriver, Palavra)
+
+dicionarioNegativo <- Dicionario_Drivers %>%
+  select(driver, subdriver, dicionarioN) %>%
+  na.omit() %>%
+  mutate(Palavra = limpaStem(dicionarioN)) %>%
+  distinct(driver, subdriver, Palavra)
+
+# ============================
+# Frequência de palavras nos comentários
+# ============================
+frequenciaPalavrasComments <- df %>%
+  select(texto_normalizado) %>%
+  unnest_tokens(Palavra, texto_normalizado) %>%
+  mutate(Palavra = limpaStem(Palavra)) %>%
+  filter(Palavra != "") %>%
+  count(Palavra, name = "Frequencia")
+
+# ============================
+# Função para match parcial
+# ============================
+match_parcial <- function(dicionario, comentarios){
+  dicionario %>%
+    rowwise() %>%
+    mutate(Frequencia = sum(comentarios$Frequencia[str_detect(comentarios$Palavra, fixed(Palavra, ignore_case = TRUE))])) %>%
+    ungroup() %>%
+    filter(Frequencia > 0)
+}
+
+# ============================
+# Aplicar match parcial
+# ============================
+frequenciaPalavrasDP <- match_parcial(dicionarioPositivo, frequenciaPalavrasComments)
+frequenciaPalavrasDN <- match_parcial(dicionarioNegativo, frequenciaPalavrasComments)
+
+# ============================
+# Agregar por Driver/Subdriver
+# ============================
+frequenciaDPporDriver <- frequenciaPalavrasDP %>%
+  group_by(driver, subdriver) %>%
+  summarise(Frequencia = sum(Frequencia), .groups = "drop") %>%
+  arrange(desc(Frequencia))
+
+frequenciaDNporDriver <- frequenciaPalavrasDN %>%
+  group_by(driver, subdriver) %>%
+  summarise(Frequencia = sum(Frequencia), .groups = "drop") %>%
+  arrange(desc(Frequencia))
+
+# ============================
+# Salvar todas as bases em Excel
+# ============================
+write_xlsx(list(
+  Frequencia_Comentarios = frequenciaPalavrasComments,
+  Positivo_Palavras = frequenciaPalavrasDP,
+  Negativo_Palavras = frequenciaPalavrasDN,
+  Positivo_Por_Driver = frequenciaDPporDriver,
+  Negativo_Por_Driver = frequenciaDNporDriver
+), "C:/Users/Shai/Desktop/frequencia_por_driver.xlsx")
+
+cat("💾 Arquivo salvo: frequencia_por_driver.xlsx\n")
+
+
+#####Seguindo os passos do Ariel, vou rodar o antijoin,##
+#para ver quais palavras ficaram de fora do dicionário mas que poderiam se encaixar nos subdrivers####
+
+# ============================
+# Junta todas as palavras (radicais) do dicionário
+# ============================
+dicionario_todas_palavras <- bind_rows(
+  dicionarioPositivo %>% select(Palavra),
+  dicionarioNegativo %>% select(Palavra)
+) %>%
+  distinct()
+
+# ============================
+# Identifica palavras dos comentários que NÃO têm match com nenhum radical do dicionário
+# ============================
+palavras_nao_classificadas <- frequenciaPalavrasComments %>%
+  filter(!map_lgl(Palavra, function(palavra_comentario) {
+    any(str_detect(palavra_comentario, regex(paste0("\\b", dicionario_todas_palavras$Palavra, "\\w*"), ignore_case = TRUE)))
+  })) %>%
+  arrange(desc(Frequencia))
+
+# ============================
+# Visualiza as 20 mais frequentes ainda não classificadas
+# ============================
+head(palavras_nao_classificadas, 20)
+
+# ============================
+# (Opcional) Atualiza Excel com nova aba
+# ============================
+write_xlsx(list(
+  Frequencia_Comentarios = frequenciaPalavrasComments,
+  Positivo_Palavras = frequenciaPalavrasDP,
+  Negativo_Palavras = frequenciaPalavrasDN,
+  Positivo_Por_Driver = frequenciaDPporDriver,
+  Negativo_Por_Driver = frequenciaDNporDriver,
+  Palavras_Nao_Classificadas = palavras_nao_classificadas
+), "C:/Users/Shai/Desktop/frequencia_por_driver.xlsx")
+
+cat("💾 Arquivo atualizado com aba: Palavras_Nao_Classificadas (match parcial + stemming aplicado)\n")
+
+
+
+#####Como alternativa para inclusão de palavras que ficaram de fora do dicionário######
+#####Vou tentar um modelo de embeddings semânticos em português o fastText, no phyton ######
+####mas, vou dar o check manualmente######
+
